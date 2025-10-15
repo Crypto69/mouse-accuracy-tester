@@ -1,0 +1,774 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Mouse Accuracy Tester</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        overflow: hidden;
+        background: #000000;
+        color: white;
+      }
+
+      .container {
+        width: 100vw;
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+      }
+
+      .screen {
+        display: none;
+        width: 100%;
+        height: 100%;
+      }
+
+      .screen.active {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+      }
+
+      /* Start Screen */
+      .start-screen h1 {
+        font-size: 3rem;
+        margin-bottom: 2rem;
+        text-shadow: 2px 2px 8px rgba(255, 255, 255, 0.3);
+      }
+
+      .start-screen p {
+        font-size: 1.2rem;
+        margin-bottom: 1rem;
+        max-width: 600px;
+        text-align: center;
+        line-height: 1.6;
+      }
+
+      .start-screen .subtitle {
+        font-size: 1.4rem;
+        margin-top: 2rem;
+        margin-bottom: 1rem;
+        font-weight: bold;
+      }
+
+      .resolution-selector {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.8rem;
+        margin-bottom: 1rem;
+        max-width: 600px;
+      }
+
+      .resolution-option {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.6rem 1rem;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 8px;
+        cursor: pointer;
+        transition: background 0.2s;
+        font-size: 1rem;
+      }
+
+      .resolution-option:hover {
+        background: rgba(255, 255, 255, 0.2);
+      }
+
+      .resolution-option input[type="radio"] {
+        cursor: pointer;
+        width: 18px;
+        height: 18px;
+      }
+
+      .resolution-option span {
+        user-select: none;
+      }
+
+      .difficulty-buttons {
+        display: flex;
+        gap: 2rem;
+        margin-top: 1rem;
+      }
+
+      .start-screen button {
+        padding: 1rem 2.5rem;
+        font-size: 1.3rem;
+        background: white;
+        color: #000000;
+        border: none;
+        border-radius: 50px;
+        cursor: pointer;
+        transition: transform 0.2s, box-shadow 0.2s;
+        font-weight: bold;
+      }
+
+      .start-screen button:hover {
+        transform: scale(1.05);
+        box-shadow: 0 10px 25px rgba(255, 255, 255, 0.5);
+      }
+
+      .start-screen button.easy {
+        background: #4ade80;
+      }
+
+      .start-screen button.medium {
+        background: #fbbf24;
+      }
+
+      .start-screen button.hard {
+        background: #f87171;
+      }
+
+      /* Countdown Screen */
+      .countdown-screen {
+        font-size: 8rem;
+        font-weight: bold;
+        text-shadow: 3px 3px 15px rgba(255, 255, 255, 0.5);
+      }
+
+      /* Test Screen */
+      .test-screen {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="21" height="21" viewBox="0 0 21 21"><line x1="10.5" y1="0" x2="10.5" y2="21" stroke="white" stroke-width="1"/><line x1="0" y1="10.5" x2="21" y2="10.5" stroke="white" stroke-width="1"/></svg>')
+            10 10,
+          crosshair;
+        justify-content: flex-start;
+        align-items: flex-start;
+      }
+
+      .test-screen.constrained {
+        margin: 0 auto;
+        border: 3px solid rgba(255, 255, 255, 0.5);
+        box-shadow: 0 0 30px rgba(255, 255, 255, 0.3);
+        background: #000000;
+      }
+
+      .progress-bar {
+        position: absolute;
+        top: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(255, 255, 255, 0.95);
+        color: #000000;
+        padding: 1rem 2rem;
+        border-radius: 10px;
+        font-size: 1.5rem;
+        font-weight: bold;
+        z-index: 10;
+        box-shadow: 0 4px 15px rgba(255, 255, 255, 0.3);
+      }
+
+      .target-square {
+        position: absolute;
+        background: #424141;
+        border: 1px solid white;
+        display: none;
+        transition: opacity 0.1s;
+      }
+
+      .target-center {
+        position: absolute;
+        width: 3px;
+        height: 3px;
+        background: #f55f45;
+        top: calc(50% - 1.5px);
+        left: calc(50% - 1.5px);
+      }
+
+      .target-pixel {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        background: #ff2800;
+        top: 1px;
+        left: 1px;
+      }
+
+      /* Results Screen */
+      .results-screen {
+        overflow-y: auto;
+        max-height: 100vh;
+        padding: 1rem 1.5rem 1rem 1.5rem;
+        justify-content: flex-start !important;
+        align-items: center;
+      }
+
+      .results-screen h1 {
+        font-size: 1.8rem;
+        margin-bottom: 0.8rem;
+        margin-top: 0;
+      }
+
+      .summary {
+        display: flex;
+        gap: 1.5rem;
+        margin-bottom: 1rem;
+        justify-content: center;
+      }
+
+      .summary-card {
+        background: rgba(255, 255, 255, 0.2);
+        padding: 1rem 1.5rem;
+        border-radius: 10px;
+        text-align: center;
+        min-width: 160px;
+      }
+
+      .summary-card h3 {
+        font-size: 0.8rem;
+        margin-bottom: 0.5rem;
+        opacity: 0.9;
+      }
+
+      .summary-card .value {
+        font-size: 2rem;
+        font-weight: bold;
+      }
+
+      .results-table {
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 10px;
+        padding: 1rem;
+        max-width: 1000px;
+        margin: 0 auto 1rem auto;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+
+      th,
+      td {
+        padding: 0.4rem 0.5rem;
+        text-align: center;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        font-size: 0.85rem;
+      }
+
+      th {
+        font-weight: bold;
+        font-size: 0.9rem;
+        background: rgba(255, 255, 255, 0.1);
+      }
+
+      tr:hover {
+        background: rgba(255, 255, 255, 0.05);
+      }
+
+      .size-header {
+        background: rgba(255, 255, 255, 0.2);
+        font-weight: bold;
+        font-size: 0.8rem;
+      }
+
+      .size-header td {
+        padding: 0.5rem;
+      }
+
+      .restart-btn {
+        margin-top: 1rem;
+        margin-bottom: 1rem;
+        padding: 0.8rem 2.5rem;
+        font-size: 1rem;
+        background: white;
+        color: #000000;
+        border: none;
+        border-radius: 50px;
+        cursor: pointer;
+        transition: transform 0.2s, box-shadow 0.2s;
+        font-weight: bold;
+      }
+
+      .restart-btn:hover {
+        transform: scale(1.05);
+        box-shadow: 0 10px 25px rgba(255, 255, 255, 0.5);
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Start Screen -->
+    <div class="screen active start-screen">
+      <h1>Mouse Accuracy Tester</h1>
+      <p>This test will measure your mouse accuracy and reaction time.</p>
+      <p>
+        Click on the center pixel of each square as quickly and accurately as
+        possible.
+      </p>
+
+      <div class="subtitle">Select Screen Resolution:</div>
+      <div class="resolution-selector">
+        <label class="resolution-option">
+          <input type="radio" name="resolution" value="fullscreen" checked />
+          <span>Full Screen</span>
+        </label>
+        <label class="resolution-option">
+          <input type="radio" name="resolution" value="3840x2160" />
+          <span>3840x2160 (4K UHD)</span>
+        </label>
+        <label class="resolution-option">
+          <input type="radio" name="resolution" value="2560x1440" />
+          <span>2560x1440 (QHD)</span>
+        </label>
+        <label class="resolution-option">
+          <input type="radio" name="resolution" value="2048x1152" />
+          <span>2048x1152</span>
+        </label>
+        <label class="resolution-option">
+          <input type="radio" name="resolution" value="1920x1080" />
+          <span>1920x1080 (Full HD)</span>
+        </label>
+        <label class="resolution-option">
+          <input type="radio" name="resolution" value="1536x864" />
+          <span>1536x864</span>
+        </label>
+        <label class="resolution-option">
+          <input type="radio" name="resolution" value="1440x900" />
+          <span>1440x900</span>
+        </label>
+        <label class="resolution-option">
+          <input type="radio" name="resolution" value="1366x768" />
+          <span>1366x768</span>
+        </label>
+      </div>
+
+      <div class="subtitle">Select Difficulty:</div>
+      <div class="difficulty-buttons">
+        <button class="easy" onclick="startTest('easy')">
+          Easy<br /><small>(41px - 17px)</small>
+        </button>
+        <button class="medium" onclick="startTest('medium')">
+          Medium<br /><small>(29px - 11px)</small>
+        </button>
+        <button class="hard" onclick="startTest('hard')">
+          Hard<br /><small>(15px - 3px)</small>
+        </button>
+      </div>
+    </div>
+
+    <!-- Countdown Screen -->
+    <div class="screen countdown-screen">
+      <span id="countdown">5</span>
+    </div>
+
+    <!-- Test Screen -->
+    <div class="screen test-screen" id="testScreen">
+      <div class="progress-bar">
+        <span id="progressText">Square Size: 20px | Round: 1/5</span>
+      </div>
+      <div class="target-square" id="targetSquare">
+        <div class="target-center">
+          <div class="target-pixel"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Results Screen -->
+    <div class="screen results-screen">
+      <h1>Test Results</h1>
+      <div class="summary">
+        <div class="summary-card">
+          <h3>Average Accuracy</h3>
+          <div class="value" id="avgAccuracy">-</div>
+        </div>
+        <div class="summary-card">
+          <h3>Average Response Time</h3>
+          <div class="value" id="avgTime">-</div>
+        </div>
+      </div>
+      <div class="results-table">
+        <table id="resultsTable">
+          <thead>
+            <tr>
+              <th>Square Size</th>
+              <th>Round</th>
+              <th>Accuracy (%)</th>
+              <th>Response Time (ms)</th>
+              <th>Distance from Center (px)</th>
+            </tr>
+          </thead>
+          <tbody id="resultsBody"></tbody>
+        </table>
+      </div>
+      <button class="restart-btn" onclick="location.reload()">
+        Restart Test
+      </button>
+    </div>
+
+    <script>
+      // Audio Context for beep
+      const audioContext = new (window.AudioContext ||
+        window.webkitAudioContext)();
+
+      function playBeep() {
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+
+        oscillator.frequency.value = 800;
+        oscillator.type = "sine";
+
+        gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(
+          0.01,
+          audioContext.currentTime + 0.3
+        );
+
+        oscillator.start(audioContext.currentTime);
+        oscillator.stop(audioContext.currentTime + 0.3);
+      }
+
+      // Difficulty configurations (all odd numbers for centered pixel)
+      const difficulties = {
+        easy: [41, 33, 25, 17],
+        medium: [29, 23, 17, 11],
+        hard: [15, 11, 7, 3],
+      };
+
+      // Test state
+      const testState = {
+        squareSizes: [],
+        roundsPerSize: 4,
+        currentSizeIndex: 0,
+        currentRound: 0,
+        results: [],
+        squareDisplayTime: 0,
+        difficulty: "",
+        resolution: "fullscreen",
+        resolutionWidth: 0,
+        resolutionHeight: 0,
+      };
+
+      function switchScreen(screenClass) {
+        document.querySelectorAll(".screen").forEach((screen) => {
+          screen.classList.remove("active");
+        });
+        document.querySelector("." + screenClass).classList.add("active");
+      }
+
+      function startTest(difficulty) {
+        // Set difficulty and square sizes
+        testState.difficulty = difficulty;
+        testState.squareSizes = difficulties[difficulty];
+        testState.currentSizeIndex = 0;
+        testState.currentRound = 0;
+        testState.results = [];
+
+        // Get selected resolution
+        const selectedResolution = document.querySelector('input[name="resolution"]:checked').value;
+        testState.resolution = selectedResolution;
+
+        // Check if selected resolution exceeds actual screen size
+        if (selectedResolution !== "fullscreen") {
+          const [width, height] = selectedResolution.split("x").map(Number);
+          const screenWidth = window.screen.width;
+          const screenHeight = window.screen.height;
+
+          if (width > screenWidth || height > screenHeight) {
+            const proceed = confirm(
+              `Warning: Selected resolution ${selectedResolution} exceeds your screen size (${screenWidth}x${screenHeight}).\n\n` +
+              `The test area may extend beyond visible bounds.\n\n` +
+              `Continue anyway?`
+            );
+
+            if (!proceed) {
+              return; // Cancel test start
+            }
+          }
+        }
+
+        // Parse resolution and set dimensions
+        const testScreen = document.getElementById("testScreen");
+        testScreen.classList.remove("constrained");
+
+        if (selectedResolution === "fullscreen") {
+          testState.resolutionWidth = window.innerWidth;
+          testState.resolutionHeight = window.innerHeight;
+          testScreen.style.width = "100%";
+          testScreen.style.height = "100%";
+        } else {
+          const [width, height] = selectedResolution.split("x").map(Number);
+          testState.resolutionWidth = width;
+          testState.resolutionHeight = height;
+          testScreen.classList.add("constrained");
+          testScreen.style.width = width + "px";
+          testScreen.style.height = height + "px";
+        }
+
+        // Request fullscreen
+        const elem = document.documentElement;
+        if (elem.requestFullscreen) {
+          elem
+            .requestFullscreen()
+            .catch((err) => console.log("Fullscreen not available"));
+        } else if (elem.webkitRequestFullscreen) {
+          elem.webkitRequestFullscreen();
+        } else if (elem.msRequestFullscreen) {
+          elem.msRequestFullscreen();
+        }
+
+        switchScreen("countdown-screen");
+        startCountdown();
+      }
+
+      function startCountdown() {
+        let count = 5;
+        const countdownElement = document.getElementById("countdown");
+
+        const interval = setInterval(() => {
+          count--;
+          if (count > 0) {
+            countdownElement.textContent = count;
+          } else {
+            clearInterval(interval);
+            playBeep();
+            setTimeout(() => {
+              switchScreen("test-screen");
+              showNextSquare();
+            }, 300);
+          }
+        }, 1000);
+      }
+
+      function getRandomPosition(squareSize) {
+        const margin = squareSize + 50;
+        const maxX = testState.resolutionWidth - margin;
+        const maxY = testState.resolutionHeight - margin - 100; // Account for progress bar
+
+        const x = margin + Math.random() * (maxX - margin);
+        const y = margin + 100 + Math.random() * (maxY - margin);
+
+        return { x, y };
+      }
+
+      function showNextSquare() {
+        if (testState.currentSizeIndex >= testState.squareSizes.length) {
+          showResults();
+          return;
+        }
+
+        const currentSize = testState.squareSizes[testState.currentSizeIndex];
+        const square = document.getElementById("targetSquare");
+        const position = getRandomPosition(currentSize);
+
+        // Set square properties
+        square.style.width = currentSize + "px";
+        square.style.height = currentSize + "px";
+        square.style.left = position.x + "px";
+        square.style.top = position.y + "px";
+        square.style.display = "block";
+
+        // For very small squares (3px), show only red square without white border
+        const centerDot = square.querySelector(".target-center");
+        if (currentSize === 3) {
+          square.style.border = "none";
+          square.style.background = "#ff2800";
+          centerDot.style.display = "none";
+        } else {
+          // Normal styling - reset to CSS defaults
+          square.style.border = "1px solid white";
+          square.style.background = "#424141";
+          centerDot.style.display = "block";
+        }
+
+        // Update progress
+        document.getElementById(
+          "progressText"
+        ).textContent = `Square Size: ${currentSize}px | Round: ${
+          testState.currentRound + 1
+        }/${testState.roundsPerSize}`;
+
+        // Record display time
+        testState.squareDisplayTime = performance.now();
+      }
+
+      function calculateAccuracy(clickX, clickY, squareSize) {
+        const square = document.getElementById("targetSquare");
+
+        // Floor all coordinates to get actual pixel positions (no sub-pixels)
+        const clickPixelX = Math.floor(clickX);
+        const clickPixelY = Math.floor(clickY);
+
+        // Calculate center pixel position
+        const squareLeft = parseFloat(square.style.left);
+        const squareTop = parseFloat(square.style.top);
+        const centerPixelX = Math.floor(squareLeft) + Math.floor(squareSize / 2);
+        const centerPixelY = Math.floor(squareTop) + Math.floor(squareSize / 2);
+
+        // Calculate pixel-based distance using Chebyshev distance (max of X,Y differences)
+        // This represents discrete "rings" of pixels around the center
+        const pixelDistanceX = Math.abs(clickPixelX - centerPixelX);
+        const pixelDistanceY = Math.abs(clickPixelY - centerPixelY);
+        const pixelDistance = Math.max(pixelDistanceX, pixelDistanceY);
+
+        // Define perfect zone radius based on difficulty
+        let perfectZoneRadius = 0;
+        if (testState.difficulty === 'easy') {
+          perfectZoneRadius = 2;  // 5×5 pixel zone
+        } else if (testState.difficulty === 'medium') {
+          perfectZoneRadius = 1;  // 3×3 pixel zone
+        }
+        // hard mode keeps 0 (single center pixel only)
+
+        // Calculate accuracy with difficulty-based perfect zones
+        let accuracy;
+        if (pixelDistance <= perfectZoneRadius) {
+          accuracy = 100;  // Within perfect zone
+        } else {
+          // Linear decay from edge of perfect zone to edge of square
+          const maxPixelDistance = Math.floor(squareSize / 2);
+          const distanceBeyondPerfectZone = pixelDistance - perfectZoneRadius;
+          const maxDistanceBeyondPerfectZone = maxPixelDistance - perfectZoneRadius;
+          accuracy = Math.max(0, 100 - (distanceBeyondPerfectZone / maxDistanceBeyondPerfectZone) * 100);
+        }
+
+        return {
+          accuracy: accuracy,
+          distance: pixelDistance,
+        };
+      }
+
+      document
+        .getElementById("testScreen")
+        .addEventListener("click", function (event) {
+          const square = document.getElementById("targetSquare");
+
+          if (square.style.display === "none") {
+            return;
+          }
+
+          const responseTime = performance.now() - testState.squareDisplayTime;
+          const currentSize = testState.squareSizes[testState.currentSizeIndex];
+
+          // Convert click coordinates from viewport space to test screen container space
+          const testScreen = document.getElementById("testScreen");
+          const testScreenRect = testScreen.getBoundingClientRect();
+
+          const result = calculateAccuracy(
+            event.clientX - testScreenRect.left - testScreen.clientLeft,
+            event.clientY - testScreenRect.top - testScreen.clientTop,
+            currentSize
+          );
+
+          // Store result
+          testState.results.push({
+            squareSize: currentSize,
+            round: testState.currentRound + 1,
+            accuracy: result.accuracy,
+            responseTime: responseTime,
+            distance: result.distance,
+          });
+
+          // Hide square
+          square.style.display = "none";
+
+          // Move to next round
+          testState.currentRound++;
+
+          if (testState.currentRound >= testState.roundsPerSize) {
+            testState.currentRound = 0;
+            testState.currentSizeIndex++;
+
+            // Beep when transitioning to a new size (but not when test is complete)
+            if (testState.currentSizeIndex < testState.squareSizes.length) {
+              playBeep();
+            }
+          }
+
+          // Small delay before next square
+          setTimeout(() => {
+            showNextSquare();
+          }, 500);
+        });
+
+      function showResults() {
+        switchScreen("results-screen");
+
+        // Update title with difficulty and resolution
+        const difficultyName =
+          testState.difficulty.charAt(0).toUpperCase() +
+          testState.difficulty.slice(1);
+        const resolutionText = testState.resolution === "fullscreen"
+          ? "Full Screen"
+          : testState.resolution;
+        document.querySelector(
+          ".results-screen h1"
+        ).textContent = `Test Results - ${difficultyName} Mode (${resolutionText})`;
+
+        // Calculate averages
+        const totalAccuracy = testState.results.reduce(
+          (sum, r) => sum + r.accuracy,
+          0
+        );
+        const totalTime = testState.results.reduce(
+          (sum, r) => sum + r.responseTime,
+          0
+        );
+        const avgAccuracy = totalAccuracy / testState.results.length;
+        const avgTime = totalTime / testState.results.length;
+
+        document.getElementById("avgAccuracy").textContent =
+          avgAccuracy.toFixed(1) + "%";
+        document.getElementById("avgTime").textContent =
+          avgTime.toFixed(0) + "ms";
+
+        // Build results table
+        const tbody = document.getElementById("resultsBody");
+        tbody.innerHTML = "";
+
+        testState.squareSizes.forEach((size) => {
+          // Size header row
+          const sizeResults = testState.results.filter(
+            (r) => r.squareSize === size
+          );
+          const sizeAvgAccuracy =
+            sizeResults.reduce((sum, r) => sum + r.accuracy, 0) /
+            sizeResults.length;
+          const sizeAvgTime =
+            sizeResults.reduce((sum, r) => sum + r.responseTime, 0) /
+            sizeResults.length;
+
+          const headerRow = document.createElement("tr");
+          headerRow.className = "size-header";
+          headerRow.innerHTML = `
+                    <td colspan="5">
+                        Square Size: ${size}px | Avg Accuracy: ${sizeAvgAccuracy.toFixed(
+            1
+          )}% | Avg Time: ${sizeAvgTime.toFixed(0)}ms
+                    </td>
+                `;
+          tbody.appendChild(headerRow);
+
+          // Individual results
+          sizeResults.forEach((result) => {
+            const row = document.createElement("tr");
+            row.innerHTML = `
+                        <td>${result.squareSize}px</td>
+                        <td>${result.round}</td>
+                        <td>${result.accuracy.toFixed(1)}%</td>
+                        <td>${result.responseTime.toFixed(0)}ms</td>
+                        <td>${result.distance}px</td>
+                    `;
+            tbody.appendChild(row);
+          });
+        });
+      }
+    </script>
+  </body>
+</html>
