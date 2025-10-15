@@ -113,7 +113,7 @@ Or visit the live demo: [Mouse Accuracy Tester](https://crypto69.github.io/mouse
 - **Designers**: Verify pixel-accurate cursor control for detailed work
 - **Hardware Testing**: Compare different mice, mousepads, or DPI settings
 - **Benchmarking**: Track improvement over time with consistent metrics
-- **Accessibility**: Test mouse control for accessibility evaluations
+- **Assistive Technology Users**: Essential tool for people with disabilities who use gyroscopic head mice, eye-tracking systems, or other adaptive input devices. The multiple difficulty modes and detailed accuracy metrics help fine-tune sensitivity, acceleration, and dead-zone settings to achieve optimal control and comfort
 
 ## License
 
