@@ -49,12 +49,12 @@ After completing the test, view detailed statistics including:
 ### Start Screen
 Configure your test with resolution and difficulty selection:
 
-![Start Screen](images/accuracy%20test%20settings.png)
+![Start Screen](images/accuracy-test-settings.png)
 
 ### Test In Progress
 Click on the center pixel of each progressively smaller target:
 
-![Test In Progress](images/Accuracy%20test%20in%20progress.png)
+![Test In Progress](images/accuracy-test-in-progress.png)
 
 ## How It Works
 
