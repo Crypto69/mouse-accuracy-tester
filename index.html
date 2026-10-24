@@ -170,6 +170,58 @@
         font-weight: bold;
         z-index: 10;
         box-shadow: 0 4px 15px rgba(255, 255, 255, 0.3);
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        white-space: nowrap;
+      }
+
+      .mode-badge {
+        padding: 0.2rem 0.9rem;
+        border-radius: 50px;
+        font-size: 1.1rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+
+      .mode-badge.easy {
+        background: #4ade80;
+      }
+
+      .mode-badge.medium {
+        background: #fbbf24;
+      }
+
+      .mode-badge.hard {
+        background: #f87171;
+      }
+
+      .wave-banner {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        text-align: center;
+        pointer-events: none;
+        z-index: 20;
+        opacity: 0;
+        transition: opacity 0.2s;
+      }
+
+      .wave-banner.visible {
+        opacity: 1;
+      }
+
+      .wave-banner .wave-title {
+        font-size: 4rem;
+        font-weight: bold;
+        text-shadow: 3px 3px 15px rgba(255, 255, 255, 0.5);
+      }
+
+      .wave-banner .wave-subtitle {
+        font-size: 1.5rem;
+        margin-top: 0.5rem;
+        opacity: 0.85;
       }
 
       .target-square {
@@ -368,7 +420,12 @@
     <!-- Test Screen -->
     <div class="screen test-screen" id="testScreen">
       <div class="progress-bar">
+        <span class="mode-badge" id="modeBadge">Easy</span>
         <span id="progressText">Square Size: 20px | Round: 1/5</span>
+      </div>
+      <div class="wave-banner" id="waveBanner">
+        <div class="wave-title" id="waveTitle">Wave 1</div>
+        <div class="wave-subtitle" id="waveSubtitle"></div>
       </div>
       <div class="target-square" id="targetSquare">
         <div class="target-center">
@@ -441,6 +498,16 @@
         hard: [15, 11, 7, 3],
       };
 
+      // Perfect zone radius (Chebyshev distance) scoring 100% for each difficulty
+      const perfectZoneRadii = {
+        easy: 3, // 7×7 pixel zone
+        medium: 2, // 5×5 pixel zone
+        hard: 1, // 3×3 pixel zone
+      };
+
+      // How long the "new wave" banner stays on screen before the next square
+      const waveBannerDuration = 1200;
+
       // Test state
       const testState = {
         squareSizes: [],
@@ -469,6 +536,11 @@
         testState.currentSizeIndex = 0;
         testState.currentRound = 0;
         testState.results = [];
+
+        // Show current mode on the test screen
+        const modeBadge = document.getElementById("modeBadge");
+        modeBadge.className = "mode-badge " + difficulty;
+        modeBadge.textContent = difficulty;
 
         // Get selected resolution
         const selectedResolution = document.querySelector('input[name="resolution"]:checked').value;
@@ -540,7 +612,7 @@
             playBeep();
             setTimeout(() => {
               switchScreen("test-screen");
-              showNextSquare();
+              announceWave(showNextSquare);
             }, 300);
           }
         }, 1000);
@@ -555,6 +627,26 @@
         const y = margin + 100 + Math.random() * (maxY - margin);
 
         return { x, y };
+      }
+
+      // Briefly display the current wave (square size) before its first square
+      function announceWave(onDone) {
+        const waveNumber = testState.currentSizeIndex + 1;
+        const currentSize = testState.squareSizes[testState.currentSizeIndex];
+        const banner = document.getElementById("waveBanner");
+
+        document.getElementById("waveTitle").textContent =
+          `Wave ${waveNumber} of ${testState.squareSizes.length}`;
+        document.getElementById("waveSubtitle").textContent =
+          waveNumber === 1
+            ? `${currentSize}px targets — get ready!`
+            : `Smaller ${currentSize}px targets — slightly harder!`;
+
+        banner.classList.add("visible");
+        setTimeout(() => {
+          banner.classList.remove("visible");
+          onDone();
+        }, waveBannerDuration);
       }
 
       function showNextSquare() {
@@ -590,7 +682,9 @@
         // Update progress
         document.getElementById(
           "progressText"
-        ).textContent = `Square Size: ${currentSize}px | Round: ${
+        ).textContent = `Wave ${testState.currentSizeIndex + 1}/${
+          testState.squareSizes.length
+        } | Square Size: ${currentSize}px | Round: ${
           testState.currentRound + 1
         }/${testState.roundsPerSize}`;
 
@@ -617,22 +711,18 @@
         const pixelDistanceY = Math.abs(clickPixelY - centerPixelY);
         const pixelDistance = Math.max(pixelDistanceX, pixelDistanceY);
 
-        // Define perfect zone radius based on difficulty
-        let perfectZoneRadius = 0;
-        if (testState.difficulty === 'easy') {
-          perfectZoneRadius = 2;  // 5×5 pixel zone
-        } else if (testState.difficulty === 'medium') {
-          perfectZoneRadius = 1;  // 3×3 pixel zone
-        }
-        // hard mode keeps 0 (single center pixel only)
+        // Perfect zone radius based on difficulty
+        const perfectZoneRadius = perfectZoneRadii[testState.difficulty];
 
         // Calculate accuracy with difficulty-based perfect zones
         let accuracy;
+        const maxPixelDistance = Math.floor(squareSize / 2);
         if (pixelDistance <= perfectZoneRadius) {
           accuracy = 100;  // Within perfect zone
+        } else if (pixelDistance > maxPixelDistance) {
+          accuracy = 0;  // Outside the square (also covers zones that fill the whole square)
         } else {
           // Linear decay from edge of perfect zone to edge of square
-          const maxPixelDistance = Math.floor(squareSize / 2);
           const distanceBeyondPerfectZone = pixelDistance - perfectZoneRadius;
           const maxDistanceBeyondPerfectZone = maxPixelDistance - perfectZoneRadius;
           accuracy = Math.max(0, 100 - (distanceBeyondPerfectZone / maxDistanceBeyondPerfectZone) * 100);
@@ -685,9 +775,11 @@
             testState.currentRound = 0;
             testState.currentSizeIndex++;
 
-            // Beep when transitioning to a new size (but not when test is complete)
+            // Beep and announce the new wave when transitioning to a new size (but not when test is complete)
             if (testState.currentSizeIndex < testState.squareSizes.length) {
               playBeep();
+              announceWave(showNextSquare);
+              return;
             }
           }
 

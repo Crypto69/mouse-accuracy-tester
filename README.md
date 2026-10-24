@@ -12,15 +12,15 @@ A web-based mouse accuracy testing application that measures precision and react
 ### 🎮 Multiple Difficulty Modes
 
 **Easy Mode** (41px - 17px targets)
-- 5×5 pixel perfect accuracy zone (25 pixels)
+- 7×7 pixel perfect accuracy zone (49 pixels)
 - Ideal for beginners or casual testing
 
 **Medium Mode** (29px - 11px targets)
-- 3×3 pixel perfect accuracy zone (9 pixels)
+- 5×5 pixel perfect accuracy zone (25 pixels)
 - Balanced challenge for intermediate users
 
 **Hard Mode** (15px - 3px targets)
-- Exact center pixel only (1×1 perfect zone)
+- 3×3 pixel perfect accuracy zone (9 pixels)
 - Ultimate precision challenge
 
 ### 📐 Resolution Options
